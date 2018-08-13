@@ -9,4 +9,9 @@
 
     <string name="up">Up</string>
 
+    <!--Tools Text-->
+    <string name="sample_article_title">The Title</string>
+    <string name="sample_article_info">The Articles Info</string>
+    <string name="sample_article_author">The Author</string>
+
 </resources>

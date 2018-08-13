@@ -1,5 +1,7 @@
 package com.example.xyzreader.ui;
 
+import android.app.Activity;
+import android.app.Application;
 import android.app.LoaderManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -7,9 +9,14 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.Loader;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
+import android.support.v4.app.ActivityOptionsCompat;
+import android.support.v4.view.ViewCompat;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.ActionBarActivity;
+import android.support.v7.graphics.Palette;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.support.v7.widget.Toolbar;
@@ -20,12 +27,17 @@ import android.util.TypedValue;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.xyzreader.R;
 import com.example.xyzreader.data.ArticleLoader;
 import com.example.xyzreader.data.ItemsContract;
 import com.example.xyzreader.data.UpdaterService;
+import com.squareup.picasso.Callback;
+import com.squareup.picasso.Picasso;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -60,7 +72,7 @@ public class ArticleListActivity extends ActionBarActivity implements
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
 
 
-        final View toolbarContainerView = findViewById(R.id.toolbar_container);
+        //final View toolbarContainerView = findViewById(R.id.toolbar_container);
 
         mSwipeRefreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_refresh_layout);
 
@@ -112,10 +124,10 @@ public class ArticleListActivity extends ActionBarActivity implements
 
     @Override
     public void onLoadFinished(Loader<Cursor> cursorLoader, Cursor cursor) {
-        Adapter adapter = new Adapter(cursor);
+        Adapter adapter = new Adapter(cursor, this);
         adapter.setHasStableIds(true);
         mRecyclerView.setAdapter(adapter);
-        int columnCount = getResources().getInteger(R.integer.list_column_count);
+        int columnCount = getResources().getInteger(R.integer.grid_column_count);
         StaggeredGridLayoutManager sglm =
                 new StaggeredGridLayoutManager(columnCount, StaggeredGridLayoutManager.VERTICAL);
         mRecyclerView.setLayoutManager(sglm);
@@ -128,9 +140,12 @@ public class ArticleListActivity extends ActionBarActivity implements
 
     private class Adapter extends RecyclerView.Adapter<ViewHolder> {
         private Cursor mCursor;
+        private Activity mActivity;
 
-        public Adapter(Cursor cursor) {
+
+        public Adapter(Cursor cursor, Context context) {
             mCursor = cursor;
+            mActivity = (Activity) context;
         }
 
         @Override
@@ -146,6 +161,7 @@ public class ArticleListActivity extends ActionBarActivity implements
             view.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
+
                     startActivity(new Intent(Intent.ACTION_VIEW,
                             ItemsContract.Items.buildItemUri(getItemId(vh.getAdapterPosition()))));
                 }
@@ -165,7 +181,7 @@ public class ArticleListActivity extends ActionBarActivity implements
         }
 
         @Override
-        public void onBindViewHolder(ViewHolder holder, int position) {
+        public void onBindViewHolder(final ViewHolder holder, int position) {
             mCursor.moveToPosition(position);
             holder.titleView.setText(mCursor.getString(ArticleLoader.Query.TITLE));
             Date publishedDate = parsePublishedDate();
@@ -184,10 +200,64 @@ public class ArticleListActivity extends ActionBarActivity implements
                         + "<br/>" + " by "
                         + mCursor.getString(ArticleLoader.Query.AUTHOR)));
             }
-            holder.thumbnailView.setImageUrl(
-                    mCursor.getString(ArticleLoader.Query.THUMB_URL),
-                    ImageLoaderHelper.getInstance(ArticleListActivity.this).getImageLoader());
-            holder.thumbnailView.setAspectRatio(mCursor.getFloat(ArticleLoader.Query.ASPECT_RATIO));
+
+
+//----------------------------
+//            holder.mView.setOnClickListener(new View.OnClickListener() {
+//                @Override
+//                public void onClick(View v) {
+//                    Context context = v.getContext();
+//                    Intent intent = new Intent(Intent.ACTION_VIEW,  ItemsContract.Items.buildItemUri(getItemId(holder.getAdapterPosition())));
+//
+//
+//                    ActivityOptionsCompat options = ActivityOptionsCompat.makeSceneTransitionAnimation(mActivity, holder.thumbnailView, "articleImage");
+//                    startActivity(intent, options.toBundle());
+//
+//                }
+//            });
+
+            //------------
+
+
+            //---------------------------------------------------------------
+            // Use Picasso to load image from the web into our imageview..
+            //---------------------------------------------------------------
+            holder.thumbnailView.setDrawingCacheEnabled(true);
+            Picasso.get()
+                    .load(mCursor.getString(ArticleLoader.Query.THUMB_URL))
+                    .into(holder.thumbnailView, new Callback() {
+                        @Override
+                        public void onSuccess() {
+                            Bitmap bitmap = ((BitmapDrawable) holder.thumbnailView.getDrawable()).getBitmap();
+                            Palette.from(bitmap)
+                                    .generate(new Palette.PaletteAsyncListener() {
+                                        @Override
+                                        public void onGenerated(Palette palette) {
+                                            Palette.Swatch textSwatch = palette.getDarkMutedSwatch();
+                                            if (textSwatch == null) {
+                                                //Toast.makeText(MainActivity.this, "Null swatch :(", Toast.LENGTH_SHORT).show();
+                                                return;
+                                            }
+                                            holder.thumbnailTitleContainer.setBackgroundColor(textSwatch.getRgb());
+                                            holder.titleView.setTextColor(textSwatch.getBodyTextColor());
+                                            holder.subtitleView.setTextColor(textSwatch.getTitleTextColor());
+                                        }
+                                    });
+                        }
+
+                        @Override
+                        public void onError(Exception e) {
+                            Toast.makeText(getApplicationContext(),"Error loading an image",Toast.LENGTH_SHORT).show();
+                        }
+                    });
+
+
+
+
+//            holder.thumbnailView.setImageUrl(
+//                    mCursor.getString(ArticleLoader.Query.THUMB_URL),
+//                    ImageLoaderHelper.getInstance(ArticleListActivity.this).getImageLoader());
+//            holder.thumbnailView.setAspectRatio(mCursor.getFloat(ArticleLoader.Query.ASPECT_RATIO));
         }
 
         @Override
@@ -197,15 +267,21 @@ public class ArticleListActivity extends ActionBarActivity implements
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        public DynamicHeightNetworkImageView thumbnailView;
+        //public DynamicHeightNetworkImageView thumbnailView;
+        public final ImageView thumbnailView;
         public TextView titleView;
         public TextView subtitleView;
+        public LinearLayout thumbnailTitleContainer;
+        public final View mView;
 
         public ViewHolder(View view) {
             super(view);
-            thumbnailView = (DynamicHeightNetworkImageView) view.findViewById(R.id.thumbnail);
+           // thumbnailView = (DynamicHeightNetworkImageView) view.findViewById(R.id.thumbnail);
+            thumbnailView = (ImageView) view.findViewById(R.id.thumbnail);
             titleView = (TextView) view.findViewById(R.id.article_title);
             subtitleView = (TextView) view.findViewById(R.id.article_subtitle);
+            thumbnailTitleContainer = (LinearLayout) view.findViewById(R.id.title_container);
+            mView = view;
         }
     }
 }

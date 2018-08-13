@@ -17,12 +17,26 @@
 
 <resources>
 
-    <style name="Theme.Bacon" parent="@style/Theme.AppCompat.Light.NoActionBar">
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorPrimary</item>
+        <item name="android:windowContentTransitions">true</item>
 
+        <!--Text-->
+        <item name="titleTextColor">@color/colorTitleText</item>
     </style>
 
-    <style name="Theme.Bacon.Detail">
+        <!--Status bars-->
+    <style name="AppTheme.StatusBars">
         <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
 
+    <style name="text_body" parent="@android:style/TextAppearance.Material.Medium">>
+        <!--<item name="android:textColor">@color/text_body_color</item>-->
+        <item name="android:textSize">@dimen/detail_body_text_size</item>
+        <item name = "android:layout_marginLeft">@dimen/detail_inner_horiz_margin</item>
+        <item name = "android:layout_marginRight">@dimen/detail_inner_horiz_margin</item>
+
+     </style>
 </resources>
